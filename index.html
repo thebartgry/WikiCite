@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>WikiCite</title>
+  <meta name="description" content="Turn a DOI into Wikipedia-ready citation wikicode." />
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#111111" />
+  <style>
+    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    body { margin: 0; background:#0b0b0b; color:#f3f3f3; }
+    .wrap { max-width: 820px; margin: 0 auto; padding: 18px; }
+    .card { background:#151515; border:1px solid #262626; border-radius: 14px; padding: 16px; }
+    h1 { font-size: 22px; margin: 0 0 10px; }
+    p { margin: 8px 0 14px; color:#cfcfcf; }
+    label { display:block; font-size: 13px; color:#cfcfcf; margin: 10px 0 6px; }
+    input, textarea, button {
+      width: 100%; box-sizing: border-box; border-radius: 10px;
+      border:1px solid #2b2b2b; background:#0f0f0f; color:#f3f3f3;
+      padding: 12px; font-size: 16px;
+    }
+    textarea { min-height: 160px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .row { display:flex; gap:10px; flex-wrap: wrap; margin-top: 10px; }
+    .row > * { flex: 1 1 180px; }
+    button { cursor:pointer; background:#1f1f1f; }
+    button:hover { background:#252525; }
+    .small { font-size: 12px; color:#bdbdbd; margin-top: 10px; }
+    .err { color: #ff9a9a; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>WikiCite</h1>
+      <p>Enter a DOI → get Wikipedia-ready citation wikicode.</p>
+
+      <label for="doi">DOI</label>
+      <input id="doi" placeholder="e.g., 10.1038/s41586-020-2649-2" autocomplete="off" />
+
+      <div class="row">
+        <button id="go">Generate citation</button>
+        <button id="copy" disabled>Copy wikicode</button>
+        <button id="clear">Clear</button>
+      </div>
+
+      <div id="status" class="small"></div>
+      <div id="error" class="err"></div>
+
+      <label for="out">Wikicode output</label>
+      <textarea id="out" readonly placeholder="Your wikicode will appear here..."></textarea>
+
+      <div class="small">
+        Data source: Crossref. Tip: You can “Add to Home Screen” on mobile to use this like an app.
+      </div>
+    </div>
+  </div>
+
+<script>
+  // Basic DOI cleanup: trims, removes "doi:" prefix, and strips URL form.
+  function normalizeDOI(raw) {
+    if (!raw) return "";
+    let s = raw.trim();
+    s = s.replace(/^doi:\s*/i, "");
+    s = s.replace(/^https?:\/\/(dx\.)?doi\.org\//i, "");
+    return s.trim();
+  }
+
+  function pickFirst(arr) {
+    if (!arr) return "";
+    if (Array.isArray(arr)) return arr[0] ?? "";
+    return arr;
+  }
+
+  function joinAuthors(authors) {
+    if (!Array.isArray(authors) || authors.length === 0) return "";
+    // Wikipedia cites often accept "last, first; last, first" in |author=...,
+    // but we'll use |last1= |first1= etc in a later refinement.
+    // For now: "Last F.; Last F."
+    return authors.map(a => {
+      const given = (a.given || "").trim();
+      const family = (a.family || "").trim();
+      const initial = given ? (" " + given.split(/\s+/).map(x => x[0]).join("") + ".") : "";
+      return (family + initial).trim();
+    }).filter(Boolean).join("; ");
+  }
+
+  function toCiteJournal(msg, doi) {
+    // Crossref fields vary by work type; we handle common journal-article cases.
+    const title = pickFirst(msg.title) || "";
+    const container = pickFirst(msg["container-title"]) || "";
+    const volume = msg.volume || "";
+    const issue = msg.issue || "";
+    const page = msg.page || "";
+
+    // Prefer "published-print" > "published-online" > "created"
+    const dateParts =
+      (msg["published-print"] && msg["published-print"]["date-parts"]) ||
+      (msg["published-online"] && msg["published-online"]["date-parts"]) ||
+      (msg.created && msg.created["date-parts"]) ||
+      null;
+
+    let year = "";
+    if (dateParts && Array.isArray(dateParts) && Array.isArray(dateParts[0])) {
+      year = String(dateParts[0][0] ?? "");
+    }
+
+    const url = (msg.URL || (doi ? `https://doi.org/${doi}` : "")) || "";
+    const authorStr = joinAuthors(msg.author);
+
+    // Start with a simple, broadly-accepted Wikipedia citation template.
+    // We'll refine the exact style later (authors formatting, access-date, etc).
+    let w = `{{Cite journal
+|title=${title}
+|journal=${container}
+|year=${year}
+|volume=${volume}
+|issue=${issue}
+|pages=${page}
+|doi=${doi}
+|url=${url}
+|author=${authorStr}
+}}`;
+
+    // Clean up blank lines (keep template tidy)
+    w = w.split("\n").filter(line => !line.match(/\|\w+=\s*$/)).join("\n");
+    return w;
+  }
+
+  async function fetchCrossref(doi) {
+    const endpoint = `https://api.crossref.org/works/${encodeURIComponent(doi)}`;
+    // Polite header; Crossref recommends including contact in UA/mailto in serious apps,
+    // but for a personal tool this is fine.
+    const res = await fetch(endpoint, { headers: { "Accept": "application/json" } });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`Crossref error (${res.status}). ${text.slice(0, 200)}`);
+    }
+    const data = await res.json();
+    if (!data?.message) throw new Error("Unexpected Crossref response.");
+    return data.message;
+  }
+
+  const $doi = document.getElementById("doi");
+  const $out = document.getElementById("out");
+  const $status = document.getElementById("status");
+  const $error = document.getElementById("error");
+  const $copy = document.getElementById("copy");
+
+  function setStatus(s) { $status.textContent = s || ""; }
+  function setError(s) { $error.textContent = s || ""; }
+
+  async function generate() {
+    setError("");
+    const doi = normalizeDOI($doi.value);
+    if (!doi) {
+      setError("Please enter a DOI (e.g., 10.1038/...).");
+      return;
+    }
+
+    setStatus("Fetching metadata…");
+    $out.value = "";
+    $copy.disabled = true;
+
+    try {
+      const msg = await fetchCrossref(doi);
+      setStatus("Generating wikicode…");
+      const wikicode = toCiteJournal(msg, doi);
+      $out.value = wikicode;
+      $copy.disabled = false;
+      setStatus("Done.");
+    } catch (e) {
+      setStatus("");
+      setError(String(e?.message || e));
+    }
+  }
+
+  document.getElementById("go").addEventListener("click", generate);
+
+  $doi.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") generate();
+  });
+
+  document.getElementById("copy").addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText($out.value);
+      setStatus("Copied to clipboard ✅");
+      setTimeout(() => setStatus("Done."), 900);
+    } catch {
+      setError("Could not copy automatically. Select the text and copy manually.");
+    }
+  });
+
+  document.getElementById("clear").addEventListener("click", () => {
+    $doi.value = "";
+    $out.value = "";
+    setStatus("");
+    setError("");
+    $copy.disabled = true;
+    $doi.focus();
+  });
+
+  // Register service worker for offline shell + installability
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));
+  }
+</script>
+</body>
+</html>
