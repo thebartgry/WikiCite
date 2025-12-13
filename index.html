@@ -81,41 +81,55 @@
   }
 
   function joinAuthors(authors) {
-    if (!Array.isArray(authors) || authors.length === 0) return "";
-    return authors.map(a => {
-      const given = (a.given || "").trim();
-      const family = (a.family || "").trim();
-      const initials = given ? given.split(/\s+/).map(x => x[0]).join("") + "." : "";
-      return (family + (initials ? " " + initials : "")).trim();
-    }).filter(Boolean).join("; ");
-  }
+  if (!Array.isArray(authors) || authors.length === 0) return "";
+
+  const max = 7;
+  const selected = authors.slice(0, max);
+
+  const formatted = selected.map(a => {
+    const family = (a.family || "").trim();
+    const given = (a.given || "").trim();
+    const initials = given
+      ? given.split(/\s+/).map(x => x[0]).join("")
+      : "";
+    return `${family} ${initials}`.trim();
+  });
+
+  // add a period only after the last author
+  return formatted.join(", ") + ".";
+}
+
 
   function toWikicodeCiteJournal(msg, doi) {
-    const title = pickFirst(msg.title) || "";
-    const journal = pickFirst(msg["container-title"]) || "";
-    const volume = msg.volume || "";
-    const issue = msg.issue || "";
-    const pages = msg.page || "";
-    const year = yearFrom(msg);
-    const url = msg.URL || (doi ? `https://doi.org/${doi}` : "");
-    const author = joinAuthors(msg.author);
+  const titel = pickFirst(msg.title) || "";
+  const journal = pickFirst(msg["container-title"]) || "";
+  const volume = msg.volume || "";
+  const issue = msg.issue || "";
+  const pages = msg.page || "";
+  const jaar = yearFrom(msg);
+  const auteur = joinAuthors(msg.author);
+  const pmid = msg.PMID || "";
+  const taal = msg.language || "en";
 
-    let w = `{{Cite journal
-|title=${title}
-|journal=${journal}
-|year=${year}
-|volume=${volume}
-|issue=${issue}
-|pages=${pages}
-|doi=${doi}
-|url=${url}
-|author=${author}
-}}`;
+  const params = [
+    ["auteur", auteur],
+    ["jaar", jaar],
+    ["titel", titel],
+    ["journal", journal],
+    ["volume", volume],
+    ["issue", issue],
+    ["pages", pages],
+    ["doi", doi],
+    ["pmid", pmid],
+    ["taal", taal]
+  ].filter(([_, v]) => String(v || "").trim() !== "");
 
-    // remove empty params for neat output
-    w = w.split("\n").filter(line => !line.match(/\|\w+=\s*$/)).join("\n");
-    return w;
-  }
+  const body = params
+    .map(([k, v]) => ` | ${k} = ${v}`)
+    .join("");
+
+  return `<ref>{{Citeer journal${body} }}</ref>`;
+}
 
   async function fetchCrossref(doi) {
     const endpoint = `https://api.crossref.org/works/${encodeURIComponent(doi)}`;
