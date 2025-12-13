@@ -55,12 +55,20 @@
 
 <script>
   function normalizeDOI(raw) {
-    if (!raw) return "";
-    let s = raw.trim();
-    s = s.replace(/^doi:\s*/i, "");
-    s = s.replace(/^https?:\/\/(dx\.)?doi\.org\//i, "");
-    return s.trim();
-  }
+  if (!raw) return "";
+  const s = String(raw).trim();
+
+  // 1) If it's a DOI URL, strip the domain
+  const urlStripped = s.replace(/^https?:\/\/(dx\.)?doi\.org\//i, "").replace(/^doi:\s*/i, "");
+
+  // 2) Extract the first DOI-like pattern anywhere in the text
+  // DOI format: starts with 10.<digits>/
+  const m = urlStripped.match(/10\.\d{4,9}\/[^\s"'<>\]\)]+/i);
+  if (!m) return "";
+
+  // 3) Clean common trailing punctuation
+  return m[0].replace(/[.,;:!?]+$/g, "");
+}
 
   function pickFirst(v) {
     if (!v) return "";
