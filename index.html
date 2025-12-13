@@ -177,7 +177,7 @@
   async function generate() {
     setError("");
     const doi = normalizeDOI($doi.value);
-    if (!doi) { setError("Please enter a DOI (e.g., 10.1038/...)."); return; }
+    if (!doi) { setError("Please enter a DOI"); return; }
 
     setStatus("Fetching metadata…");
     $out.value = "";
