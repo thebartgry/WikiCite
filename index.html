@@ -99,6 +99,20 @@
   return formatted.join(", ") + ".";
 }
 
+  function refNameFromAuthors(authors) {
+  if (!Array.isArray(authors) || authors.length === 0) return "ref";
+
+  const family = (authors[0].family || "").trim();
+  if (!family) return "ref";
+
+  // take part before dash, lowercase, strip accents
+  const base = family.split("-")[0]
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  return base.slice(0, 5);
+}
 
   function toWikicodeCiteJournal(msg, doi) {
   const titel = pickFirst(msg.title) || "";
