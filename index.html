@@ -30,14 +30,14 @@
   <div class="wrap">
     <div class="card">
       <h1>WikiCite_nl</h1>
-      <p>Citeersjablonen vanaf DOI, simpele output</p>
+      <p>Citeersjablonen vanaf DOI, versimpelde output (auteurslijst gecondenseerd, refname klein)</p>
 
       <label for="doi">DOI</label>
       <input id="doi" placeholder="e.g., 10.1038/s41586-020-2649-2" autocomplete="off" />
 
       <div class="row">
-        <button id="go">Generate citation</button>
-        <button id="copy" disabled>Copy wikicode</button>
+        <button id="go">Genereer citatie</button>
+        <button id="copy" disabled>Kopieer code</button>
         <button id="clear">Clear</button>
       </div>
 
@@ -45,10 +45,10 @@
       <div id="error" class="err"></div>
 
       <label for="out">output</label>
-      <textarea id="out" readonly placeholder="Your wikicode will appear here..."></textarea>
+      <textarea id="out" readonly placeholder="generated citation will appear here..."></textarea>
 
       <div class="small">
-        Uses Crossref metadata.
+        Gebruikt Crossref metadata.
       </div>
     </div>
   </div>
