@@ -29,8 +29,8 @@
 <body>
   <div class="wrap">
     <div class="card">
-      <h1>Citeer</h1>
-      <p>Enter a DOI → get Wikipedia-ready citation wikicode.</p>
+      <h1>WikiCite_nl</h1>
+      <p>Citeersjablonen vanaf DOI, simpele output</p>
 
       <label for="doi">DOI</label>
       <input id="doi" placeholder="e.g., 10.1038/s41586-020-2649-2" autocomplete="off" />
@@ -44,11 +44,11 @@
       <div id="status" class="small"></div>
       <div id="error" class="err"></div>
 
-      <label for="out">Wikicode output</label>
+      <label for="out">output</label>
       <textarea id="out" readonly placeholder="Your wikicode will appear here..."></textarea>
 
       <div class="small">
-        Uses Crossref metadata. If a DOI fails, try pasting the DOI without the https://doi.org/ part.
+        Uses Crossref metadata.
       </div>
     </div>
   </div>
