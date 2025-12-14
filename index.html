@@ -87,6 +87,13 @@
     return "";
   }
 
+function toNormalCase(name) {
+  if (!name) return "";
+  return name
+    .toLowerCase()
+    .replace(/\b\p{L}/gu, c => c.toUpperCase());
+}
+  
   function joinAuthors(authors) {
   if (!Array.isArray(authors) || authors.length === 0) return "";
 
@@ -94,7 +101,7 @@
   const selected = authors.slice(0, max);
 
   const formatted = selected.map(a => {
-    const family = (a.family || "").trim();
+    const family = toNormalCase((a.family || "").trim());
     const given = (a.given || "").trim();
     const initials = given
       ? given.split(/\s+/).map(x => x[0]).join("")
@@ -174,6 +181,17 @@
   function setStatus(s) { $status.textContent = s || ""; }
   function setError(s) { $error.textContent = s || ""; }
 
+async function copyOutputToClipboard() {
+  try {
+    await navigator.clipboard.writeText($out.value);
+    setStatus("Copied ✅");
+    setTimeout(() => setStatus("Done."), 900);
+  } catch {
+    // Don't block success; just show a gentle fallback message
+    setError("Auto-copy failed (Safari can be picky). Select the text and copy manually.");
+  }
+}
+  
   async function generate() {
     setError("");
     const doi = normalizeDOI($doi.value);
@@ -188,7 +206,7 @@
       setStatus("Generating wikicode…");
       $out.value = toWikicodeCiteJournal(msg, doi);
       $copy.disabled = false;
-      setStatus("Done.");
+      await copyOutputToClipboard();
     } catch (e) {
       setStatus("");
       setError(String(e?.message || e));
@@ -198,15 +216,9 @@
   document.getElementById("go").addEventListener("click", generate);
   $doi.addEventListener("keydown", (e) => { if (e.key === "Enter") generate(); });
 
-  document.getElementById("copy").addEventListener("click", async () => {
-    try {
-      await navigator.clipboard.writeText($out.value);
-      setStatus("Copied ✅");
-      setTimeout(() => setStatus("Done."), 900);
-    } catch {
-      setError("Copy failed. Select text and copy manually.");
-    }
-  });
+ document.getElementById("copy").addEventListener("click", async () => {
+  await copyOutputToClipboard();
+});
 
   document.getElementById("clear").addEventListener("click", () => {
     $doi.value = "";
