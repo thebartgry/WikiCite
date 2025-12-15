@@ -331,13 +331,6 @@ function wikicodeCiteerBoek(book, authors, isbn) {
 }
 
 /* ---------------- main generate ---------------- */
-
-async function fetchOpenLibrary(isbn) {
-  const url = `https://openlibrary.org/isbn/${isbn}.json`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error("Open Library not found");
-  return res.json();
-}
   
 async function generate() {
   setError("");
@@ -363,54 +356,52 @@ async function generate() {
   }
 
   const isbn = normalizeISBN(raw);
-  if (isbn) {
-    setStatus("ISBN herkend — metadata ophalen…");
-try {
-  const v = await fetchGoogleBooksByISBN(isbn);
-  let openLib = null;
-try {
-  openLib = await fetchOpenLibrary(isbn);
-} catch {
-  // Open Library is optional; ignore errors
-}
+if (isbn) {
+  setStatus("ISBN herkend — metadata ophalen…");
+  try {
+    const v = await fetchGoogleBooksByISBN(isbn);
 
-  const shownIsbn = pickHyphenatedISBN({
-  googleIds: v.industryIdentifiers,
-  openLibrary: openLib,
-  fallback: isbn
-});
+    let openLib = null;
+    try {
+      openLib = await fetchOpenLibrary(isbn);
+    } catch {}
 
-  const authors = Array.isArray(v.authors) ? v.authors : [];
-  const auteur = formatAuthorsFromStrings(authors); // new helper below
-  const datum = yearFromPublishDate(v.publishedDate || "");
-  const titel = v.title || "";
-  const uitgever = v.publisher || "";
-  const editie = ""; // Google Books doesn't reliably give edition; keep blank for now
-  const taal = (v.language || "en");
-  const refName = refNameFromFirstAuthorString(authors);
+    const shownIsbn = pickHyphenatedISBN({
+      googleIds: v.industryIdentifiers,
+      openLibrary: openLib,
+      fallback: isbn
+    });
 
-  const shownIsbn = pickIsbnFromIndustryIds(v.industryIdentifiers, isbn);
+    const authors = Array.isArray(v.authors) ? v.authors : [];
+    const auteur = formatAuthorsFromStrings(authors);
+    const datum = yearFromPublishDate(v.publishedDate || "");
+    const titel = v.title || "";
+    const uitgever = v.publisher || "";
+    const editie = "";
+    const taal = v.language || "en";
+    const refName = refNameFromFirstAuthorString(authors);
 
-  const params =
-    ` | auteur = ${auteur}` +
-    ` | datum = ${datum}` +
-    ` | titel = ${titel}` +
-    ` | editie = ${editie}` +
-    ` | uitgever = ${uitgever}` +
-    ` | isbn = ${shownIsbn}` +
-    ` | pages =` +
-    ` | chapter =` +
-    ` | taal = ${taal}`;
+    const params =
+      ` | auteur = ${auteur}` +
+      ` | datum = ${datum}` +
+      ` | titel = ${titel}` +
+      ` | editie = ${editie}` +
+      ` | uitgever = ${uitgever}` +
+      ` | isbn = ${shownIsbn}` +
+      ` | pages =` +
+      ` | chapter =` +
+      ` | taal = ${taal}`;
 
-  $out.value = `<ref name="${refName}">{{Citeer boek${params} }}</ref>`;
-  $copy.disabled = false;
-  await copyOutputToClipboard();
-} catch (e) {
-  setError(String(e?.message || e));
-  setStatus("");
-}
-return;
+    $out.value = `<ref name="${refName}">{{Citeer boek${params} }}</ref>`;
+    $copy.disabled = false;
+    await copyOutputToClipboard();
+  } catch (e) {
+    setError(String(e?.message || e));
+    setStatus("");
   }
+  return;
+}
+
 
   setError("Ik herken geen DOI of ISBN in je tekst. Plak een DOI (10....) of ISBN (10/13 cijfers).");
 }
