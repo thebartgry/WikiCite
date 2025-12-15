@@ -124,6 +124,32 @@ function pickIsbnFromIndustryIds(ids, fallback) {
   return isbn13 || ids.find(x => x.type === "ISBN_10")?.identifier || fallback;
 }
 
+  function pickHyphenatedISBN({ googleIds = [], openLibrary = null, fallback }) {
+  // 1) Google Books sometimes provides hyphenated ISBNs
+  if (Array.isArray(googleIds)) {
+    const isbn13 = googleIds.find(x => x.type === "ISBN_13")?.identifier;
+    if (isbn13 && isbn13.includes("-")) return isbn13;
+
+    const isbn10 = googleIds.find(x => x.type === "ISBN_10")?.identifier;
+    if (isbn10 && isbn10.includes("-")) return isbn10;
+  }
+
+  // 2) Open Library often provides hyphenated ISBNs
+  if (openLibrary) {
+    if (Array.isArray(openLibrary.isbn_13)) {
+      const i = openLibrary.isbn_13.find(x => x.includes("-"));
+      if (i) return i;
+    }
+    if (Array.isArray(openLibrary.isbn_10)) {
+      const i = openLibrary.isbn_10.find(x => x.includes("-"));
+      if (i) return i;
+    }
+  }
+
+  // 3) Fallback: raw digits
+  return fallback;
+}
+
 
 /* ---------------- DOI → Citeer journal ---------------- */
 
@@ -334,6 +360,10 @@ async function generate() {
     setStatus("ISBN herkend — metadata ophalen…");
 try {
   const v = await fetchGoogleBooksByISBN(isbn);
+  let openLib = null;
+try {
+  openLib = await fetchOpenLibrary(isbn);
+} catch {}
 
   const authors = Array.isArray(v.authors) ? v.authors : [];
   const auteur = formatAuthorsFromStrings(authors); // new helper below
