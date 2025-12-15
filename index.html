@@ -332,6 +332,13 @@ function wikicodeCiteerBoek(book, authors, isbn) {
 
 /* ---------------- main generate ---------------- */
 
+async function fetchOpenLibrary(isbn) {
+  const url = `https://openlibrary.org/isbn/${isbn}.json`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Open Library not found");
+  return res.json();
+}
+  
 async function generate() {
   setError("");
   setStatus("");
