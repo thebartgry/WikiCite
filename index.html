@@ -5,54 +5,42 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>WikiCite</title>
   <style>
-    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
-    body { margin:0; background:#0b0b0b; color:#f3f3f3; }
-    .wrap { max-width: 980px; margin: 0 auto; padding: 8px; }
-    h1 { margin: 0 0 8px; font-size: 16px; }
-    .grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 8px;
-    }
+    body { margin:0; background:#0b0b0b; color:#f3f3f3;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+
+    .wrap { max-width: 920px; margin: 0 auto; padding: 8px; }
+
+    /* minimal “cards” */
     .panel {
       background:#151515;
       border:1px solid #262626;
       border-radius: 12px;
       overflow:hidden;
+      margin-bottom: 8px; /* small gap between DOI + ISBN */
     }
-    .panel-title {
-      padding: 6px 10px;
-      border-bottom: 1px solid #262626;
-      color:#cfcfcf;
-      font-size: 12px;
-      line-height: 1.2;
-    }
+
     iframe {
       width: 100%;
-      height: 380px;   /* tighter */
       border: 0;
       display:block;
       background:#151515;
+      height: 430px; /* compact desktop height */
     }
-    @media (max-width: 600px) {
-      iframe { height: 420px; }
+
+    /* small screens (iPad/phone) often need a bit more height */
+    @media (max-width: 800px) {
+      iframe { height: 500px; }
     }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>WikiCite</h1>
+    <div class="panel">
+      <iframe src="doi.html" loading="lazy"></iframe>
+    </div>
 
-    <div class="grid">
-      <div class="panel">
-        <div class="panel-title">📄 DOI</div>
-        <iframe src="doi.html?embed=1" loading="lazy"></iframe>
-      </div>
-
-      <div class="panel">
-        <div class="panel-title">📘 ISBN</div>
-        <iframe src="isbn.html?embed=1" loading="lazy"></iframe>
-      </div>
+    <div class="panel">
+      <iframe src="isbn.html" loading="lazy"></iframe>
     </div>
   </div>
 </body>
