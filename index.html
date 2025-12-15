@@ -363,7 +363,15 @@ try {
   let openLib = null;
 try {
   openLib = await fetchOpenLibrary(isbn);
-} catch {}
+} catch {
+  // Open Library is optional; ignore errors
+}
+
+  const shownIsbn = pickHyphenatedISBN({
+  googleIds: v.industryIdentifiers,
+  openLibrary: openLib,
+  fallback: isbn
+});
 
   const authors = Array.isArray(v.authors) ? v.authors : [];
   const auteur = formatAuthorsFromStrings(authors); // new helper below
