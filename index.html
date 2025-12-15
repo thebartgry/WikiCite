@@ -177,6 +177,18 @@ function wikicodeCiteerJournal(msg, doi) {
 
 /* ---------------- ISBN → Citeer boek ---------------- */
 
+  function formatISBN(book, rawIsbn) {
+  // Prefer hyphenated ISBNs from Open Library if available
+  if (Array.isArray(book.isbn_13) && book.isbn_13.length > 0) {
+    return book.isbn_13[0];
+  }
+  if (Array.isArray(book.isbn_10) && book.isbn_10.length > 0) {
+    return book.isbn_10[0];
+  }
+  // Fallback: return the extracted digits
+  return rawIsbn;
+}
+
 async function fetchOpenLibrary(isbn) {
   const url = `https://openlibrary.org/isbn/${isbn}.json`;
   const res = await fetch(url);
@@ -245,7 +257,7 @@ function wikicodeCiteerBoek(book, authors, isbn) {
     ["titel", titel],
     ["editie", editie],
     ["uitgever", uitgever],
-    ["isbn", isbn],
+    ["isbn", formatISBN(book, isbn)],
     ["pages", ""],
     ["chapter", ""],
     ["taal", taal]
