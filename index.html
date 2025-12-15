@@ -3,45 +3,312 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>WikiCite</title>
+  <title>WikiCite nl</title>
   <style>
-    body { margin:0; background:#0b0b0b; color:#f3f3f3;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
-
-    .wrap { max-width: 920px; margin: 0 auto; padding: 8px; }
-
-    /* minimal “cards” */
-    .panel {
-      background:#151515;
-      border:1px solid #262626;
-      border-radius: 12px;
-      overflow:hidden;
-      margin-bottom: 8px; /* small gap between DOI + ISBN */
+    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    body { margin: 0; background:#0b0b0b; color:#f3f3f3; }
+    .wrap { max-width: 820px; margin: 0 auto; padding: 10px; }
+    .card { background:#151515; border:1px solid #262626; border-radius: 14px; padding: 12px; }
+    h1 { font-size: 18px; margin: 0 0 6px; }
+    p { margin: 6px 0 10px; color:#cfcfcf; font-size: 13px; }
+    label { display:block; font-size: 12px; color:#cfcfcf; margin: 8px 0 6px; }
+    input, textarea, button {
+      width: 100%; box-sizing: border-box; border-radius: 10px;
+      border:1px solid #2b2b2b; background:#0f0f0f; color:#f3f3f3;
+      padding: 10px; font-size: 16px;
     }
-
-    iframe {
-      width: 100%;
-      border: 0;
-      display:block;
-      background:#151515;
-      height: 430px; /* compact desktop height */
-    }
-
-    /* small screens (iPad/phone) often need a bit more height */
-    @media (max-width: 800px) {
-      iframe { height: 500px; }
-    }
+    textarea { min-height: 140px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .row { display:flex; gap:8px; flex-wrap: wrap; margin-top: 8px; }
+    .row > * { flex: 1 1 160px; }
+    button { cursor:pointer; background:#1f1f1f; }
+    button:hover { background:#252525; }
+    .small { font-size: 12px; color:#bdbdbd; margin-top: 8px; }
+    .err { color: #ff9a9a; white-space: pre-wrap; margin-top: 8px; }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="panel">
-      <iframe src="doi.html" loading="lazy"></iframe>
-    </div>
+    <div class="card">
+      <h1>WikiCite nl</h1>
+      <p>Plak een DOI of ISBN (mag met extra tekst). Output wordt automatisch gekopieerd.</p>
 
-    <div class="panel">
-      <iframe src="isbn.html" loading="lazy"></iframe>
+      <label for="q">DOI / ISBN</label>
+      <input id="q" placeholder='bijv. "DOI: 10.1038/s41477-020-0618-2." of "ISBN 978-0-393-42708-0"' autocomplete="off" />
+
+      <div class="row">
+        <button id="go">Genereer</button>
+        <button id="copy" disabled>Kopieer</button>
+        <button id="clear">Wissen</button>
+      </div>
+
+      <div id="status" class="small"></div>
+      <div id="error" class="err"></div>
+
+      <label for="out">Wikicode</label>
+      <textarea id="out" readonly placeholder="Output verschijnt hier…"></textarea>
     </div>
   </div>
+
+<script>
+/* ---------------- common helpers ---------------- */
+
+const $q = document.getElementById("q");
+const $out = document.getElementById("out");
+const $status = document.getElementById("status");
+const $error = document.getElementById("error");
+const $copy = document.getElementById("copy");
+
+function setStatus(s) { $status.textContent = s || ""; }
+function setError(s) { $error.textContent = s || ""; }
+
+async function copyOutputToClipboard() {
+  try {
+    await navigator.clipboard.writeText($out.value);
+    setStatus("Gekopieerd ✅");
+    setTimeout(() => setStatus("Klaar."), 900);
+  } catch {
+    setError("Automatisch kopiëren mislukt (Safari kan streng zijn). Selecteer en kopieer handmatig.");
+  }
+}
+
+function toNormalCase(name) {
+  if (!name) return "";
+  return name
+    .toLowerCase()
+    .replace(/\b\p{L}/gu, c => c.toUpperCase());
+}
+
+/* Extract DOI anywhere in text */
+function normalizeDOI(raw) {
+  if (!raw) return "";
+  const s = String(raw).trim()
+    .replace(/^https?:\/\/(dx\.)?doi\.org\//i, "")
+    .replace(/^doi:\s*/i, "");
+  const m = s.match(/10\.\d{4,9}\/[^\s"'<>\]\)]+/i);
+  if (!m) return "";
+  return m[0].replace(/[.,;:!?]+$/g, "");
+}
+
+/* Extract ISBN (10 or 13) anywhere in text */
+function normalizeISBN(raw) {
+  if (!raw) return "";
+  const m = String(raw).replace(/[^0-9Xx]/g, "").match(/(97[89]\d{10}|\d{9}[0-9Xx])/);
+  return m ? m[1].toUpperCase() : "";
+}
+
+/* ---------------- DOI → Citeer journal ---------------- */
+
+function yearFromCrossref(msg) {
+  const dateParts =
+    (msg["published-print"] && msg["published-print"]["date-parts"]) ||
+    (msg["published-online"] && msg["published-online"]["date-parts"]) ||
+    (msg.created && msg.created["date-parts"]) ||
+    null;
+  if (dateParts && Array.isArray(dateParts) && Array.isArray(dateParts[0])) {
+    return String(dateParts[0][0] ?? "");
+  }
+  return "";
+}
+
+function joinAuthorsCrossref(authors) {
+  if (!Array.isArray(authors) || authors.length === 0) return "";
+  const max = 7;
+  const selected = authors.slice(0, max);
+
+  const formatted = selected.map(a => {
+    const family = toNormalCase((a.family || "").trim());
+    const given = (a.given || "").trim();
+    const initials = given ? given.split(/\s+/).map(x => x[0]).join("") : "";
+    return `${family} ${initials}`.trim();
+  }).filter(Boolean);
+
+  return formatted.join(", ") + ".";
+}
+
+function refNameFromCrossrefAuthors(authors) {
+  if (!Array.isArray(authors) || authors.length === 0) return "ref";
+  const family = (authors[0].family || "").trim();
+  if (!family) return "ref";
+  const base = family.split("-")[0]
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  return base.slice(0, 5);
+}
+
+async function fetchCrossref(doi) {
+  const endpoint = `https://api.crossref.org/works/${encodeURIComponent(doi)}`;
+  const res = await fetch(endpoint, { headers: { "Accept": "application/json" } });
+  if (!res.ok) throw new Error(`Crossref error (${res.status}).`);
+  const data = await res.json();
+  if (!data?.message) throw new Error("Onverwachte Crossref response.");
+  return data.message;
+}
+
+function wikicodeCiteerJournal(msg, doi) {
+  const titel = (Array.isArray(msg.title) ? (msg.title[0] || "") : (msg.title || "")) || "";
+  const journal = (Array.isArray(msg["container-title"]) ? (msg["container-title"][0] || "") : (msg["container-title"] || "")) || "";
+  const volume = msg.volume || "";
+  const issue = msg.issue || "";
+  const pages = msg.page || "";
+  const jaar = yearFromCrossref(msg);
+  const auteur = joinAuthorsCrossref(msg.author);
+  const pmid = msg.PMID || "";
+  const taal = msg.language || "en";
+  const refName = refNameFromCrossrefAuthors(msg.author);
+
+  const params = [
+    ["auteur", auteur],
+    ["jaar", jaar],
+    ["titel", titel],
+    ["journal", journal],
+    ["volume", volume],
+    ["issue", issue],
+    ["pages", pages],
+    ["doi", doi],
+    ["pmid", pmid],
+    ["taal", taal]
+  ].filter(([_, v]) => String(v || "").trim() !== "")
+   .map(([k, v]) => ` | ${k} = ${v}`)
+   .join("");
+
+  return `<ref name="${refName}">{{Citeer journal${params} }}</ref>`;
+}
+
+/* ---------------- ISBN → Citeer boek ---------------- */
+
+async function fetchOpenLibrary(isbn) {
+  const url = `https://openlibrary.org/isbn/${isbn}.json`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("ISBN niet gevonden in Open Library.");
+  return res.json();
+}
+
+async function fetchOpenLibraryAuthors(authorRefs, max = 5) {
+  if (!Array.isArray(authorRefs)) return [];
+  const out = [];
+  for (const a of authorRefs.slice(0, max)) {
+    try {
+      const res = await fetch(`https://openlibrary.org${a.key}.json`);
+      if (res.ok) out.push(await res.json());
+    } catch {}
+  }
+  return out;
+}
+
+function formatAuthorsOpenLibrary(authors) {
+  if (!Array.isArray(authors) || authors.length === 0) return "";
+  const max = 5;
+  const selected = authors.slice(0, max);
+
+  const names = selected.map(a => {
+    // OpenLibrary gives a full name string; keep it simple and stable:
+    // last token as "last name", rest initials.
+    const name = toNormalCase(a.name || "");
+    const parts = name.split(" ").filter(Boolean);
+    const last = parts.pop() || "";
+    const initials = parts.map(p => p[0]).join("");
+    return `${last} ${initials}`.trim();
+  }).filter(Boolean);
+
+  return names.join(", ") + ".";
+}
+
+function refNameFromOpenLibraryAuthors(authors) {
+  if (!Array.isArray(authors) || authors.length === 0) return "boek";
+  const firstWord = (authors[0].name || "").trim().split(" ")[0] || "boek";
+  const base = firstWord.split("-")[0]
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  return base.slice(0, 5);
+}
+
+// Keep only the year if possible (e.g. "2022", "June 2022" -> "2022")
+function yearFromPublishDate(s) {
+  const m = String(s || "").match(/\b(1[5-9]\d{2}|20\d{2})\b/);
+  return m ? m[1] : (s || "");
+}
+
+function wikicodeCiteerBoek(book, authors, isbn) {
+  const auteur = formatAuthorsOpenLibrary(authors);
+  const datum = yearFromPublishDate(book.publish_date || "");
+  const titel = book.title || "";
+  const editie = book.edition_name || "";
+  const uitgever = (book.publishers && book.publishers[0]) ? book.publishers[0] : "";
+  const taal = "en"; // keep simple for now, per your examples
+  const refName = refNameFromOpenLibraryAuthors(authors);
+
+  const params = [
+    ["auteur", auteur],
+    ["datum", datum],
+    ["titel", titel],
+    ["editie", editie],
+    ["uitgever", uitgever],
+    ["isbn", isbn],
+    ["pages", ""],
+    ["chapter", ""],
+    ["taal", taal]
+  ].map(([k, v]) => ` | ${k} = ${v}`).join("");
+
+  return `<ref name="${refName}">{{Citeer boek${params} }}</ref>`;
+}
+
+/* ---------------- main generate ---------------- */
+
+async function generate() {
+  setError("");
+  setStatus("");
+  $out.value = "";
+  $copy.disabled = true;
+
+  const raw = $q.value;
+
+  const doi = normalizeDOI(raw);
+  if (doi) {
+    setStatus("DOI herkend — metadata ophalen…");
+    try {
+      const msg = await fetchCrossref(doi);
+      $out.value = wikicodeCiteerJournal(msg, doi);
+      $copy.disabled = false;
+      await copyOutputToClipboard();
+    } catch (e) {
+      setError(String(e?.message || e));
+      setStatus("");
+    }
+    return;
+  }
+
+  const isbn = normalizeISBN(raw);
+  if (isbn) {
+    setStatus("ISBN herkend — metadata ophalen…");
+    try {
+      const book = await fetchOpenLibrary(isbn);
+      const authors = await fetchOpenLibraryAuthors(book.authors, 5);
+      $out.value = wikicodeCiteerBoek(book, authors, isbn);
+      $copy.disabled = false;
+      await copyOutputToClipboard();
+    } catch (e) {
+      setError(String(e?.message || e));
+      setStatus("");
+    }
+    return;
+  }
+
+  setError("Ik herken geen DOI of ISBN in je tekst. Plak een DOI (10....) of ISBN (10/13 cijfers).");
+}
+
+document.getElementById("go").addEventListener("click", generate);
+$q.addEventListener("keydown", (e) => { if (e.key === "Enter") generate(); });
+document.getElementById("copy").addEventListener("click", copyOutputToClipboard);
+document.getElementById("clear").addEventListener("click", () => {
+  $q.value = "";
+  $out.value = "";
+  setStatus("");
+  setError("");
+  $copy.disabled = true;
+  $q.focus();
+});
+</script>
 </body>
 </html>
