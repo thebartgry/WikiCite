@@ -10,5 +10,5 @@ Live version:
 ## What it does
 
 - fetches metadata from **Crossref**
-- Outputs `citeerjournal` template, Dutch parameter names (`auteur`, `jaar`, `titel`, etc.)
+- Outputs `{{citeer journal | }}` template, Dutch parameter names (`auteur`, `jaar`, `titel`, etc.)
  
