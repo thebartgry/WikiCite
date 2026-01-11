@@ -180,17 +180,6 @@ function toNormalCase(name) {
 
   function setStatus(s) { $status.textContent = s || ""; }
   function setError(s) { $error.textContent = s || ""; }
-
-async function copyOutputToClipboard() {
-  try {
-    await navigator.clipboard.writeText($out.value);
-    setStatus("Copied ✅");
-    setTimeout(() => setStatus("Done."), 900);
-  } catch {
-    // Don't block success; just show a gentle fallback message
-    setError("Auto-copy failed (Safari can be picky). Select the text and copy manually.");
-  }
-}
   
   async function generate() {
     setError("");
@@ -206,7 +195,7 @@ async function copyOutputToClipboard() {
       setStatus("Generating wikicode…");
       $out.value = toWikicodeCiteJournal(msg, doi);
       $copy.disabled = false;
-      await copyOutputToClipboard();
+      setStatus("Done.");
     } catch (e) {
       setStatus("");
       setError(String(e?.message || e));
@@ -217,7 +206,13 @@ async function copyOutputToClipboard() {
   $doi.addEventListener("keydown", (e) => { if (e.key === "Enter") generate(); });
 
  document.getElementById("copy").addEventListener("click", async () => {
-  await copyOutputToClipboard();
+  try {
+    await navigator.clipboard.writeText($out.value);
+    setStatus("copied ✅");
+    setTimeout(() => setStatus("done."), 900);
+  } catch {
+    setError("copy failed.");
+  }
 });
 
   document.getElementById("clear").addEventListener("click", () => {
