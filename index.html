@@ -152,7 +152,7 @@ function toNormalCase(name) {
 
   function toWikicodeCiteJournal(msg, doi) {
   const refName = refNameFromAuthors(msg.author);
-  const titel = pickFirst(msg.title) || "";
+  const titel = normalizeTitle(pickFirst(msg.title) || "");
   const journal = pickFirst(msg["container-title"]) || "";
   const volume = msg.volume || "";
   const issue = msg.issue || "";
