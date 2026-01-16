@@ -89,9 +89,31 @@
 
 function toNormalCase(name) {
   if (!name) return "";
-  return name
-    .toLowerCase()
-    .replace(/\b\p{L}/gu, c => c.toUpperCase());
+  const lower = String(name).trim().toLocaleLowerCase();
+
+  // Capitalize first letter of each token after: start, space, hyphen, apostrophe
+  return lower.replace(/(^|[\s\-’'])(\p{L})/gu, (m, sep, ch) => sep + ch.toLocaleUpperCase());
+}
+
+  function normalizeTitle(title) {
+  if (!title) return "";
+
+  const s = String(title).trim();
+
+  // Detect "mostly uppercase" titles
+  const letters = s.replace(/[^\p{L}]/gu, "");
+  if (!letters) return s;
+
+  const upperRatio =
+    letters.replace(/[^\p{Lu}]/gu, "").length / letters.length;
+
+  // If ≥80% uppercase → convert to sentence case
+  if (upperRatio >= 0.8) {
+    const lower = s.toLocaleLowerCase();
+    return lower.charAt(0).toLocaleUpperCase() + lower.slice(1);
+  }
+
+  return s;
 }
   
   function joinAuthors(authors) {
