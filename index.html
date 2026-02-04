@@ -131,8 +131,10 @@ function toNormalCase(name) {
     return `${family} ${initials}`.trim();
   });
 
-  // add a period only after the last author
-  return formatted.join(", ") + ".";
+  const hasEtAl = authors.length > max;
+  const suffix = hasEtAl ? ", et al." : ".";
+
+  return formatted.join(", ") + suffix;
 }
 
   function refNameFromAuthors(authors) {
