@@ -153,23 +153,50 @@ function toNormalCase(name) {
   return formatted.join(", ") + suffix;
 }
 
-  function refNameFromAuthors(authors) {
-  if (!Array.isArray(authors) || authors.length === 0) return "ref";
+  function refNameFromAuthors(authors, title) {
+  if (!Array.isArray(authors) || authors.length === 0) return refNameFromTitle(title);
 
   const family = (authors[0].family || "").trim();
-  if (!family) return "ref";
+  if (!family) return refNameFromTitle(title);
 
-  // take part before dash, lowercase, strip accents
   const base = family.split("-")[0]
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z]/g, "");
 
-  return base.slice(0, 5);
+  // If surname is short enough, use surname logic; now up to 8 letters
+  if (base.length <= 8) return base;
+
+  // If surname is longer than 8 letters, use a meaningful title word
+  return refNameFromTitle(title) || base.slice(0, 8);
+}
+
+  function refNameFromTitle(title) {
+  if (!title) return "ref";
+
+  const boringWords = new Set([
+    "the","and","for","with","from","into","onto","over","under","between",
+    "through","within","among","across","using","based","study","studies",
+    "analysis","analyses","novel","new","role","roles","effect","effects",
+    "evidence","insights","toward","towards","comparative","global",
+    "molecular","cellular","plant","plants","green"
+  ]);
+
+  const words = String(title)
+    .replace(/''(.*?)''/g, "$1")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .match(/[a-z]{5,12}/g) || [];
+
+  const candidate = words.find(w => !boringWords.has(w));
+
+  return candidate ? candidate.slice(0, 8) : "ref";
 }
 
   function toWikicodeCiteJournal(msg, doi) {
-  const refName = refNameFromAuthors(msg.author);
+  const refName = refNameFromAuthors(msg.author, titel);
   const titel = cleanWikiMarkup(
   normalizeTitle(pickFirst(msg.title) || "") );
   const journal = pickFirst(msg["container-title"]) || "";
