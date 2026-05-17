@@ -424,8 +424,8 @@ function renderLibrary() {
   $library.innerHTML = items.map((item, index) => `
     <div class="library-item">
       <div class="library-title">
-        <strong>${item.author || "Unknown"} (${item.year || "n.d."})</strong> —
-        <i>${abbreviateJournal(item.journal || "")}</i> —
+        <strong>${item.author || "Unknown"}</strong> (${item.year || "n.d."}).
+        <i>${abbreviateJournal(item.journal || "")}</i> –
         ${shortTitle(item.title || "")}
       </div>
       <div class="library-actions">
