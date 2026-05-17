@@ -425,7 +425,7 @@ function renderLibrary() {
     <div class="library-item">
       <div class="library-title">
         <strong>${item.author || "Unknown"} (${item.year || "n.d."})</strong> —
-        <i>${item.journal || "Unknown journal"}</i> —
+        <i>${abbreviateJournal(item.journal || "")}</i> —
         ${shortTitle(item.title || "")}
       </div>
       <div class="library-actions">
@@ -440,7 +440,7 @@ function shortTitle(title) {
   return String(title)
     .replace(/''(.*?)''/g, "$1")
     .split(/\s+/)
-    .slice(0, 7)
+    .slice(0, 4)
     .join(" ");
 }
 
