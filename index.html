@@ -176,12 +176,60 @@ function toNormalCase(name) {
   if (!title) return "ref";
 
   const boringWords = new Set([
-    "the","and","for","with","from","into","onto","over","under","between",
-    "through","within","among","across","using","based","study","studies",
-    "analysis","analyses","novel","new","role","roles","effect","effects",
-    "evidence","insights","toward","towards","comparative","global",
-    "molecular","cellular","plant","plants","green"
-  ]);
+  // General English
+  "the","and","for","with","from","into","onto","over","under","between",
+  "through","within","among","across","using","based","toward","towards",
+  "during","after","before","their","these","those","this","that",
+
+  // Generic science-paper filler
+  "study","studies","analysis","analyses","novel","new","role","roles",
+  "effect","effects","evidence","insights","approach","approaches",
+  "mechanism","mechanisms","function","functions","association",
+  "associations","dynamics","pattern","patterns","response","responses",
+  "interaction","interactions","system","systems","network","networks",
+  "model","models","method","methods","overview","review","characterization",
+  "identification","regulation","evaluation","comparison","comparative",
+  "global","local","multiple","common","distinct","specific","potential",
+
+  // Biology-general
+  "biological","molecular","cellular","genetic","genomic","genomics",
+  "transcriptomic","transcriptomics","proteomic","proteomics",
+  "metabolic","metabolism","physiological","evolutionary","structural",
+  "functional","environmental","ecological","organismal",
+
+  // Taxonomy / phylogeny
+  "phylogeny","phylogenetic","phylogenetics","evolution","evolutionary",
+  "taxonomic","taxonomy","clade","lineage","lineages","species",
+  "organism","organisms","plants","plant","fungi","fungal","animals",
+  "animal","bacterial","bacteria","archaeal","archaea","microbial",
+  "microbiome","eukaryotic","prokaryotic",
+
+  // Molecular biology
+  "expression","signaling","signalling","pathway","pathways",
+  "biosynthesis","degradation","activation","inhibition","assembly",
+  "synthesis","transport","localization","transcription","translation",
+  "replication","mutation","mutations","domain","domains",
+
+  // Biochemistry
+  "enzyme","enzymes","protein","proteins","receptor","receptors",
+  "substrate","substrates","binding","complex","complexes",
+  "metabolite","metabolites","catalytic","biochemical",
+
+  // Immunology
+  "immune","immunity","inflammatory","inflammation","cytokine",
+  "cytokines","macrophage","macrophages","lymphocyte","lymphocytes",
+  "antigen","antigens","antibody","antibodies","tcell","bcell",
+  "interferon","interleukin",
+
+  // Ecology / environment
+  "community","communities","adaptation","adaptations","diversity",
+  "distribution","climate","habitat","ecosystem","ecosystems",
+
+  // Common weak title words
+  "high","low","major","minor","critical","important","essential",
+  "associated","mediated","dependent","induced","reveals","revealed",
+  "controls","promotes","required","underlies","links","linking"
+]);
 
   const words = String(title)
     .replace(/''(.*?)''/g, "$1")
