@@ -276,6 +276,76 @@ function toNormalCase(name) {
   return candidate ? candidate.slice(0, 8) : "ref";
 }
 
+function abbreviateJournal(journal) {
+  if (!journal) return "";
+
+  // One-word journals are usually kept as-is
+  if (!journal.includes(" ")) return journal;
+
+  const abbreviations = {
+    "journal": "J.",
+    "international": "Int.",
+    "review": "Rev.",
+    "reviews": "Rev.",
+    "medicine": "Med.",
+    "medical": "Med.",
+    "biological": "Biol.",
+    "biology": "Biol.",
+    "experimental": "Exp.",
+    "american": "Am.",
+    "british": "Br.",
+    "european": "Eur.",
+    "national": "Natl.",
+    "clinical": "Clin.",
+    "research": "Res.",
+    "science": "Sci.",
+    "sciences": "Sci.",
+    "proceedings": "Proc.",
+    "immunology": "Immunol.",
+    "microbiology": "Microbiol.",
+    "virology": "Virol.",
+    "pharmacology": "Pharmacol.",
+    "chemistry": "Chem.",
+    "ecology": "Ecol.",
+    "genetics": "Genet.",
+    "evolution": "Evol.",
+    "molecular": "Mol.",
+    "cellular": "Cell.",
+    "environmental": "Environ."
+  };
+
+  const skipWords = new Set([
+    "of", "the", "and", "for", "in", "on"
+  ]);
+
+  return journal
+    .split(/\s+/)
+    .filter(word => !skipWords.has(word.toLowerCase()))
+    .map(word => {
+      const clean = word.replace(/[.,:;()]/g, "");
+      const lower = clean.toLowerCase();
+
+      // Keep acronyms untouched
+      if (/^[A-Z0-9]{2,}$/.test(clean)) {
+        return clean;
+      }
+
+      // Use known abbreviation
+      if (abbreviations[lower]) {
+        return abbreviations[lower];
+      }
+
+      // Short words stay unchanged
+      if (clean.length <= 6) {
+        return clean;
+      }
+
+      // Generic fallback abbreviation
+      return clean.slice(0, 5) + ".";
+    })
+    .join(" ");
+}
+  
   function toWikicodeCiteJournal(msg, doi) {
   const titel = cleanWikiMarkup(
   normalizeTitle(pickFirst(msg.title) || "") );
