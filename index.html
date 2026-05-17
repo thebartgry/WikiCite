@@ -196,9 +196,9 @@ function toNormalCase(name) {
 }
 
   function toWikicodeCiteJournal(msg, doi) {
-  const refName = refNameFromAuthors(msg.author, titel);
   const titel = cleanWikiMarkup(
   normalizeTitle(pickFirst(msg.title) || "") );
+  const refName = refNameFromAuthors(msg.author, titel);
   const journal = pickFirst(msg["container-title"]) || "";
   const volume = msg.volume || "";
   const issue = msg.issue || "";
