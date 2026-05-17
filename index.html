@@ -352,13 +352,25 @@ function renderLibrary() {
 
   $library.innerHTML = items.map((item, index) => `
     <div class="library-item">
-      <div class="library-title"><strong>${item.refName}</strong> — ${item.title}</div>
+      <div class="library-title">
+        <strong>${item.author || "Unknown"} (${item.year || "n.d."})</strong> —
+        <i>${item.journal || "Unknown journal"}</i> —
+        ${shortTitle(item.title || "")}
+      </div>
       <div class="library-actions">
         <button onclick="copySavedCitation(${index})">⧉</button>
         <button onclick="deleteSavedCitation(${index})">✕</button>
       </div>
     </div>
   `).join("");
+}
+
+function shortTitle(title) {
+  return String(title)
+    .replace(/''(.*?)''/g, "$1")
+    .split(/\s+/)
+    .slice(0, 7)
+    .join(" ");
 }
 
 async function copySavedCitation(index) {
@@ -397,6 +409,16 @@ function saveCurrentCitation() {
   renderLibrary();
   setStatus("Saved citation.");
 }
+
+function firstAuthorSurname(authors) {
+  if (!Array.isArray(authors) || authors.length === 0) return "Unknown";
+
+  const family = (authors[0].family || authors[0].name || "").trim();
+  if (!family) return "Unknown";
+
+  return toNormalCase(family);
+}
+  
   async function copyOutputToClipboard() {
   try {
     await navigator.clipboard.writeText($out.value);
@@ -424,6 +446,9 @@ $save.disabled = false;
 
 currentCitation = {
   refName: refNameFromAuthors(msg.author, normalizeTitle(pickFirst(msg.title) || "")),
+  author: firstAuthorSurname(msg.author),
+  year: yearFrom(msg),
+  journal: pickFirst(msg["container-title"]) || "",
   title: normalizeTitle(pickFirst(msg.title) || ""),
   doi: doi,
   wikicode: $out.value
