@@ -87,6 +87,22 @@
     return "";
   }
 
+  function cleanWikiMarkup(text) {
+  if (!text) return "";
+
+  return String(text)
+    // convert HTML italics to Wikipedia italics
+    .replace(/<i>(.*?)<\/i>/gis, "''$1''")
+
+    // remove line breaks/tabs from metadata
+    .replace(/[\r\n\t]+/g, " ")
+
+    // collapse repeated spaces
+    .replace(/\s{2,}/g, " ")
+
+    .trim();
+}
+  
 function toNormalCase(name) {
   if (!name) return "";
   const lower = String(name).trim().toLocaleLowerCase();
@@ -154,7 +170,8 @@ function toNormalCase(name) {
 
   function toWikicodeCiteJournal(msg, doi) {
   const refName = refNameFromAuthors(msg.author);
-  const titel = normalizeTitle(pickFirst(msg.title) || "");
+  const titel = cleanWikiMarkup(
+  normalizeTitle(pickFirst(msg.title) || "") );
   const journal = pickFirst(msg["container-title"]) || "";
   const volume = msg.volume || "";
   const issue = msg.issue || "";
