@@ -210,6 +210,12 @@ function toNormalCase(name) {
 
   function refNameFromTitle(title) {
   if (!title) return "ref";
+    // Prefer acronyms
+const acronymMatch = title.match(/\b[A-Z]{3,}\b/);
+
+if (acronymMatch) {
+  return acronymMatch[0].toLowerCase();
+}
 
   const boringWords = new Set([
   // General English
