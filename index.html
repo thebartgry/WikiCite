@@ -492,15 +492,6 @@ function firstAuthorSurname(authors) {
   return toNormalCase(family);
 }
   
-  async function copyOutputToClipboard() {
-  try {
-    await navigator.clipboard.writeText($out.value);
-    setStatus("Copied ✅");
-    setTimeout(() => setStatus("Done."), 900);
-  } catch {
-    setError("Auto-copy failed. Select and copy manually.");
-  }
-}
   async function generate() {
     setError("");
     const doi = normalizeDOI($doi.value);
