@@ -100,7 +100,9 @@
   if (!m) return "";
 
   // 3) Clean common trailing punctuation
-  return m[0].replace(/[.,;:!?]+$/g, "");
+  return m[0]
+  .replace(/Digital$/i, "")
+  .replace(/[.,;:!?]+$/g, "");
 }
 
   function pickFirst(v) {
