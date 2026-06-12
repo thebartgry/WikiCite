@@ -127,6 +127,9 @@
   if (!text) return "";
 
   return String(text)
+    // remove &amp
+    .replace(/&amp;/g, "&")
+    
     // convert HTML italics to Wikipedia italics
     .replace(/<i>(.*?)<\/i>/gis, "''$1''")
 
