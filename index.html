@@ -131,7 +131,7 @@
     .replace(/&amp;/g, "&")
     
     // convert HTML italics to Wikipedia italics
-    .replace(/<i>(.*?)<\/i>/gis, "''$1''")
+    .replace(/<i>(.*?)<\/i>/gis, " ''$1'' ")
 
     // remove line breaks/tabs from metadata
     .replace(/[\r\n\t]+/g, " ")
